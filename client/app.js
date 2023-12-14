@@ -1,3 +1,6 @@
+
+const socket = io();
+
 const loginForm = document.getElementById('welcome-form');
 const messagesSection = document.getElementById('messages-section');
 const messagesList = document.getElementById('messages-list');
@@ -7,16 +10,33 @@ const messageContentInput = document.getElementById('message-content');
 
 let userName = '';
 
+socket.on('message', ({ author, content }) => addMessage(author, content));
+socket.on('userList', (users) => {
+  console.log('Current users:', users);
+});
+
+socket.on('newUser', (userName) => {
+  const joinMessage = `Chat Bot: ${userName} has joined the conversation!`;
+  addMessage('Chat Bot', joinMessage, 'italic');
+});
+
+
+socket.on('removeUser', (userName) => {
+  const leaveMessage = `Chat Bot: ${userName} has left the conversation... :(`;
+  addMessage('Chat Bot', leaveMessage, 'italic');
+});
+
 loginForm.addEventListener('submit', function (event) {
   event.preventDefault();
   userName = userNameInput.value;
 
-  if(!userName){
-
-    alert('This field can not be empty.');
+  if (!userName) {
+    alert('This field cannot be empty.');
     return;
-
   }
+
+  socket.emit('join', userName);
+
   loginForm.classList.remove('show');
   messagesSection.classList.add('show');
 });
@@ -35,19 +55,22 @@ function sendMessage() {
   }
 
   addMessage(userName, messageContent);
+  socket.emit('message', { author: userName, content: messageContent });
 
-  
   messageContentInput.value = '';
 }
 
-function addMessage(author, content) {
+function addMessage(author, content, style) {
   const message = document.createElement('li');
   message.classList.add('message', 'message--received');
-  if (author === userName) {
-    message.classList.add('message--self');
+  if (author === 'Chat Bot') {
+    message.classList.add('message--bot');
+  }
+  if (style) {
+    message.style.fontStyle = style;
   }
   message.innerHTML = `
-    <h3 class="message__author">${userName === author ? 'You' : author}</h3>
+    <h3 class="message__author">${author}</h3>
     <div class="message__content">
       ${content}
     </div>
